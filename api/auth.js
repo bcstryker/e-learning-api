@@ -1,9 +1,20 @@
-import {connectDB} from '../config/db';
+import { connectDB } from '../config/db';
 import User from '../models/User';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
 export default async function handler(req, res) {
+  // Add CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'); // Allowed methods
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Allowed headers
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  // Connect to database
   await connectDB();
 
   if (req.method === 'POST') {
@@ -43,7 +54,6 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'GET') {
-    // Middleware-like behavior for token validation
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
