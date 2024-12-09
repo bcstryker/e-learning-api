@@ -1,4 +1,4 @@
-import connectDB from '../config/db';
+import {connectDB} from '../config/db';
 import User from '../models/User';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
@@ -27,6 +27,7 @@ export default async function handler(req, res) {
         {
           id: user._id,
           email: user.email,
+          role: user.role,
           courses: user.courses,
         },
         process.env.JWT_SECRET,
@@ -65,3 +66,30 @@ export default async function handler(req, res) {
 
   return res.status(405).json({ error: 'Method not allowed' });
 }
+
+// Middleware to verify admin access
+export const verifyAdmin = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authorization header missing or malformed' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Check if the user has admin privileges
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden: Admin access required' });
+    }
+
+    // Attach decoded user to the request object for use in routes
+    req.user = decoded;
+    next();
+  } catch (error) {
+    console.error('JWT validation error:', error);
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+};

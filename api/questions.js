@@ -1,4 +1,4 @@
-import connectDB from '../config/db';
+import { connectDB } from '../config/db';
 import Question from '../models/Question';
 import jwt from 'jsonwebtoken';
 
