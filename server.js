@@ -20,6 +20,7 @@ app.use(express.json());
 connectDB();
 
 // Routes
+app.use("/api/auth", require("./api/auth"));
 app.use("/api/questions", require("./api/questions"));
 
 // Start the server
