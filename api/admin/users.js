@@ -1,12 +1,31 @@
 import bcrypt from "bcryptjs";
-import {connectAdminDB} from "../../config/db";
+import { connectDB } from "../../config/db";
 import User from "../../models/User";
 import Course from "../../models/Course";
 import crypto from "crypto";
-
-connectAdminDB();
+import jwt from 'jsonwebtoken';
 
 export default async function handler(req, res) {
+  await connectDB();
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: Missing or invalid token' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+
+  // Check admin role
+  if (decoded.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden: Admin access required' });
+  }
+
   switch (req.method) {
     case "POST":
       return createUsers(req, res);
@@ -21,10 +40,8 @@ export default async function handler(req, res) {
   }
 }
 
-// Function to create users
 async function createUsers(req, res) {
-  console.log("Creating users...");
-  const {emails, courses} = req.body;
+  const { emails, courses } = req.body;
 
   if (!emails || !Array.isArray(emails) || emails.length === 0) {
     return res.status(400).json({error: "Invalid or missing email addresses"});
@@ -34,28 +51,20 @@ async function createUsers(req, res) {
   }
 
   try {
-    // Fetch ObjectIds for the provided course names
-    const courseIds = await Course.find({code: {$in: courses}}).select("_id");
-    const courseObjectIds = courseIds.map((course) => course._id);
+    const courseDetails = await Course.find({ code: { $in: courses } }).select("_id code").lean();
+    const courseObjects = courseDetails.map((course) => ({
+      courseId: course._id,
+      code: course.code,
+    }));
 
     const newUsers = [];
-
     for (const email of emails) {
       const existingUser = await User.findOne({email});
-      if (existingUser) continue; // Skip if the user already exists
+      if (existingUser) continue;
 
       const plainPassword = generateRandomPassword();
       const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-      const courseDetails = await Course.find({code: {$in: courses}}).select("_id code").lean();
-      const courseObjects = courseDetails.map((course) => {
-        console.log(course);
-        return {
-          courseId: course._id,
-          code: course.code,
-        }
-      });
-      console.log(courseObjects);
       const newUser = new User({
         name: email.split("@")[0],
         email,
@@ -75,9 +84,8 @@ async function createUsers(req, res) {
   }
 }
 
-// Function to update a user
 async function updateUser(req, res) {
-  const {email, name, newEmail, role, courses, password} = req.body;
+  const { email, name, newEmail, role, courses, password } = req.body;
 
   if (!email) {
     return res.status(400).json({error: "Email of the user to update is required"});
@@ -104,20 +112,17 @@ async function updateUser(req, res) {
   }
 }
 
-// Function to get users (single or multiple)
 async function getUsers(req, res) {
-  const {email} = req.query;
+  const { email } = req.query;
 
   try {
     if (email) {
-      // Get one user by email
       const user = await User.findOne({email});
       if (!user) {
         return res.status(404).json({error: "User not found"});
       }
       return res.status(200).json({user});
     } else {
-      // Get all users
       const users = await User.find({});
       return res.status(200).json({users});
     }
@@ -127,7 +132,6 @@ async function getUsers(req, res) {
   }
 }
 
-// Function to delete a user
 async function deleteUser(req, res) {
   const {email} = req.body;
 
@@ -148,7 +152,6 @@ async function deleteUser(req, res) {
   }
 }
 
-// Utility function to generate a random password
 function generateRandomPassword() {
   return crypto.randomBytes(8).toString("hex");
 }

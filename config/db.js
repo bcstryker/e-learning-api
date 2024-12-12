@@ -1,29 +1,18 @@
-const mongoose = require("mongoose");
+import mongoose from 'mongoose';
 
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      // useNewUrlParser: true,
-      // useUnifiedTopology: true,
-    });
-    console.log("MongoDB connected with user access...");
-  } catch (err) {
-    console.error("MongoDB connection failed:", err.message);
-    process.exit(1);
+let cached = global.mongoose;
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+export async function connectDB() {
+  if (cached.conn) {
+    return cached.conn;
   }
-};
-
-const connectAdminDB = async () => {
-  try {
-    await mongoose.connect(process.env.ADMIN_MONGO_URI, {
-      // useNewUrlParser: true,
-      // useUnifiedTopology: true,
-    });
-    console.log("MongoDB connected with admin privileges...");
-  } catch (err) {
-    console.error("MongoDB admin connection failed:", err.message);
-    process.exit(1);
+  if (!cached.promise) {
+    const opts = { /* your mongoose connection options */ };
+    cached.promise = mongoose.connect(process.env.MONGODB_URI, opts).then(mongoose => mongoose);
   }
-};
-
-module.exports = { connectDB, connectAdminDB };
+  cached.conn = await cached.promise;
+  return cached.conn;
+}

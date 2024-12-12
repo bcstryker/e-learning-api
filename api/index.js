@@ -1,3 +1,4 @@
+// /api/index.js
 import express from 'express';
 import {connectDB} from '../config/db'; // Adjust the path
 import questionsRoutes from './questions'; // Adjust the path
