@@ -1,6 +1,6 @@
 // /api/auth
-import { connectDB } from '../config/db';
-import User from '../models/User';
+import { connectDB } from '../config/db.js';
+import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
