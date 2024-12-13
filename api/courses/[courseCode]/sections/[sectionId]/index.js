@@ -1,6 +1,6 @@
-import { connectDB } from '../../../../../config/db';
-import Section from '../../../../../models/Section';
-import { authenticate } from '../../../../auth';
+import { connectDB } from '../../../../../config/db.js';
+import Section from '../../../../../models/Section.js';
+import { authenticate } from '../../../../../middleware/auth.js';
 
 export default async function handler(req, res) {
   await connectDB();
